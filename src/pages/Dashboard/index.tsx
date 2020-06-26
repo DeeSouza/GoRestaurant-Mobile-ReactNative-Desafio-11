@@ -2,7 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { Image, ScrollView } from 'react-native';
 
 import Icon from 'react-native-vector-icons/Feather';
-import { useNavigation } from '@react-navigation/native';
+import {
+  useNavigation,
+  NavigationHelpersContext,
+} from '@react-navigation/native';
 import Logo from '../../assets/logo-header.png';
 import SearchInput from '../../components/SearchInput';
 
@@ -43,6 +46,11 @@ interface Category {
   image_url: string;
 }
 
+interface ParamProps {
+  name_like: string;
+  category_like: number;
+}
+
 const Dashboard: React.FC = () => {
   const [foods, setFoods] = useState<Food[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -54,12 +62,33 @@ const Dashboard: React.FC = () => {
   const navigation = useNavigation();
 
   async function handleNavigate(id: number): Promise<void> {
-    // Navigate do ProductDetails page
+    navigation.navigate('FoodDetails', {
+      id,
+    });
   }
 
   useEffect(() => {
     async function loadFoods(): Promise<void> {
-      // Load Foods from API
+      const params = {} as ParamProps;
+
+      if (searchValue) {
+        params.name_like = searchValue;
+      }
+
+      if (selectedCategory && selectedCategory > 0) {
+        params.category_like = selectedCategory;
+      }
+
+      const response = await api.get('foods', {
+        params,
+      });
+
+      const listFoods = response.data.map((food: Food) => ({
+        ...food,
+        formattedPrice: formatValue(food.price),
+      }));
+
+      setFoods(listFoods);
     }
 
     loadFoods();
@@ -67,14 +96,19 @@ const Dashboard: React.FC = () => {
 
   useEffect(() => {
     async function loadCategories(): Promise<void> {
-      // Load categories from API
+      const response = await api.get('categories');
+      setCategories(response.data);
     }
 
     loadCategories();
   }, []);
 
   function handleSelectCategory(id: number): void {
-    // Select / deselect category
+    setSelectedCategory(state => {
+      if (state === id) return undefined;
+
+      return id;
+    });
   }
 
   return (
